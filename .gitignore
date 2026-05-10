@@ -1,0 +1,12 @@
+# 임시 분석 파일
+Segforemr_result.md
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Claude worktree 잔재
+.claude/
