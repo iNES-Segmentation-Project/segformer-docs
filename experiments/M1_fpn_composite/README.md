@@ -1,4 +1,4 @@
-# M1: Medical Composite (FPN + CE+Dice+Boundary, Kvasir-SEG)
+﻿# M1: Medical Composite (FPN + CE+Dice+Boundary, Kvasir-SEG)
 
 | | |
 |---|---|
@@ -43,3 +43,4 @@
 CamVid E5 구조(FPN + CE+Dice+Boundary + pretrained + warmup_poly + diff-LR + aug)를 Kvasir-SEG에 그대로 적용한 핵심 실험이다. M0 대비 Test Dice +0.0053, polyp IoU +0.0090으로 차이는 작지만 방향성이 일치하며, 이는 CamVid에서의 패턴(FPN > MLP)과 동일하다. 파라미터 수는 3.7M → 6.1M으로 증가하였으며, CE+Dice+Boundary 복합 loss의 스케일 차이로 train loss(0.0539)가 M0(0.0344)보다 높게 나타나지만 이는 직접 비교 의미가 없다. Early stopping이 발동되지 않고 100 epoch을 완주한 것은 복합 loss 특성상 수렴이 느리고 지속적임을 반영한다.
 
 M1 applies the E5 pipeline (FPN + CE+Dice+Boundary + pretrained + warmup_poly + diff-LR + aug) directly to Kvasir-SEG with only a config change. Test Dice of 0.9275 (+0.0053 over M0) and polyp IoU of 0.8647 (+0.0090) confirm that FPN + compound loss outperforms MLP + CE in the medical domain, consistent with CamVid findings. The higher train loss (0.0539 vs M0 0.0344) reflects compound loss scale differences, not overfitting. The model completed all 100 epochs without early stopping, reflecting the slower but steady convergence characteristic of multi-term losses.
+

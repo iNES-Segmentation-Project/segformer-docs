@@ -1,108 +1,191 @@
-# SegFormer-B0 기반 Semantic Segmentation 실험 문서
+﻿# SegFormer-B0 Semantic Segmentation Experiments
 
-## Abstract | 초록
+경량 SegFormer-B0 기반 semantic segmentation 구조 개선 및 일반화 성능 분석 프로젝트.
 
-SegFormer-B0의 경량 인코더(MiT-B0)를 고정한 채 디코더 구조(MLP vs FPN)와 손실 함수(CE / Focal / Dice / Boundary 조합)를 체계적으로 변경하여 각 요소의 독립적 기여도를 분석한다. CamVid(11 class 도시 도로)와 Kvasir-SEG(2 class 의료 폴립) 두 도메인에서 실험을 수행하였으며, 단일 변수 원칙(E0~E5)과 도메인 전환 검증(M0~M1)을 통해 범용 파이프라인의 가능성을 확인한다.
+---
 
-## Methods | 실험 설계 원칙
+## 1. Research Motivation
 
-- **인코더 고정 원칙**: MiT-B0 구조 및 ImageNet pretrained 가중치 고정
-- **단일 변수 원칙**: 실험당 Decoder 또는 Loss 중 하나만 변경
-- **공정 비교 원칙**: 동일 데이터셋·학습 스케줄·증강 조건 유지 (E0~E4)
-- **E5**: E0~E4 결과에 근거한 복합 실험 (FPN + CE+Dice+Boundary + pretrained + warmup_poly + diff-LR + aug)
+### SegFormer-B0의 구조적 한계
 
-## Experiment Index | 실험 목록
+기존 SegFormer, 특히 경량 모델인 **SegFormer-B0**는 다음과 같은 구조적 한계를 가진다.
 
-| 실험 | 도메인 | Decoder | Loss | 주요 변수 | Test mIoU / Dice |
-|------|--------|---------|------|-----------|-----------------|
-| [E0](experiments/E0_baseline/) | CamVid | MLP | CE | baseline | 0.5682 |
-| [E1](experiments/E1_fpn_ce/) | CamVid | FPN | CE | decoder | 0.5829 |
-| [E2](experiments/E2_mlp_focal/) | CamVid | MLP | Focal | loss | 0.5669 |
-| [E3](experiments/E3_mlp_ce_dice/) | CamVid | MLP | CE+Dice | loss | 0.5796 |
-| [E4](experiments/E4_mlp_ce_boundary/) | CamVid | MLP | CE+Boundary | loss | 0.5705 |
-| [E5](experiments/E5_composite/) | CamVid | FPN | CE+Dice+Boundary | 복합 | 0.7572 |
-| [M0](experiments/M0_mlp_ce/) | Kvasir-SEG | MLP | CE | baseline (의료) | 0.9222 (Dice) |
-| [M1](experiments/M1_fpn_composite/) | Kvasir-SEG | FPN | CE+Dice+Boundary | 복합 (의료) | 0.9275 (Dice) |
+- **인코더 용량에 따른 성능 편차**
+  - 동일한 디코더 구조를 사용하더라도 B0~B5 사이에서 mIoU 차이가 크게 발생
+  - 경량 encoder(B0)일수록 decoder 표현력 부족 문제가 두드러질 가능성이 존재
 
-## Key Results | 핵심 결과
+- **기존 MLP Decoder의 단순 Fusion 구조**
+  - 단순 concatenation 기반 fusion 사용
+  - multi-scale feature interaction 부족
 
-### 도메인 간 구조적 우위 비교 — Baseline(MLP+CE) vs Proposed(FPN+Compound)
+- **세부 표현력 부족**
+  - boundary
+  - small object
+  - thin structure
 
-(A) CamVid Val mIoU, (B) CamVid Test mIoU, (C) Kvasir Test Dice, (D) Kvasir Polyp IoU — 4개 패널을 한 줄에 배치하여 두 도메인에 걸친 구조적 우위를 단일 시선으로 확인한다. 각 패널에서 Baseline(MLP+CE, 회색)과 Proposed(FPN+Compound, 파랑)를 나란히 비교하며, bar 사이에 Δ 값을 녹색 배지로 표시(+0.1674, +0.1890, +0.0053, +0.0090). 모든 패널에서 Proposed가 Baseline을 상회한다.
+  등에 대한 정밀 segmentation 성능 저하 가능성이 존재
+
+이러한 한계는 특히 CamVid와 같은 도시 도로 데이터셋에서
+Pole, Pedestrian, SignSymbol과 같은 소형 객체 인식 성능 저하로 이어질 수 있다.
+
+---
+
+### 연구 목표
+
+본 프로젝트는 다음을 검증하는 것을 목표로 한다.
+
+1. Decoder 구조 변경(FPN)이 경량 encoder의 한계를 완화할 수 있는가?
+2. Loss 함수 조합이 segmentation 일반화 성능에 어떤 영향을 미치는가?
+3. 동일 구조가 의료 segmentation domain(Kvasir-SEG)에도 일반화 가능한가?
+
+---
+
+## 2. Experimental Design
+
+### Core Principles
+
+- **Encoder 고정**
+  - MiT-B0 구조 유지
+  - Encoder 자체 구조 수정 금지
+  - General-purpose segmentation pipeline 검증을 위해 encoder는 고정
+  - 단, 실험 및 재사용성을 위해 encoder 구조를 모듈화 형태로만 재구성
+  - 기능적 변경이나 추가 연산은 적용하지 않음
+
+- **Single-variable Principle**
+  - E0\~E4는 Decoder 또는 Loss 중 하나만 변경
+  - 동일 학습 조건 유지
+
+- **공정 비교 원칙**
+  - 동일 데이터셋
+  - 동일 학습 epoch
+  - 동일 augmentation 조건
+
+- **E5**
+  - E0\~E4 결과 기반 복합 확장 실험
+  - FPN + CE+Dice+Boundary + pretrained + diff-LR + aug 적용
+
+---
+
+## 3. Experiment Overview
+
+| Experiment | Domain | Decoder | Loss | Main Change | Test mIoU / Dice |
+|------------|--------|---------|------|-------------|-----------------|
+| E0 | CamVid | MLP | CE | Baseline | 0.5682 |
+| E1 | CamVid | FPN | CE | Decoder | 0.5829 |
+| E2 | CamVid | MLP | Focal | Loss | 0.5669 |
+| E3 | CamVid | MLP | CE+Dice | Loss | 0.5796 |
+| E4 | CamVid | MLP | CE+Boundary | Loss | 0.5705 |
+| E5 | CamVid | FPN | CE+Dice+Boundary | Composite | 0.7572 |
+| M0 | Kvasir-SEG | MLP | CE | Medical Baseline | 0.9222 (Dice) |
+| M1 | Kvasir-SEG | FPN | CE+Dice+Boundary | Medical Composite | 0.9275 (Dice) |
+
+---
+
+## 4. CamVid Results
+
+### Test mIoU
+
+| Experiment | Test mIoU | Δ from E0 |
+|------------|-----------|------------|
+| E0 | 0.5682 | — |
+| E1 | 0.5829 | +0.0147 |
+| E2 | 0.5669 | −0.0013 |
+| E3 | 0.5796 | +0.0114 |
+| E4 | 0.5705 | +0.0023 |
+| **E5** | **0.7572** | **+0.1890** |
+
+---
+
+### Cross-Domain Structural Comparison
 
 ![Cross-Domain Structural Advantage](figure/4panel_cross_domain_comparison.png)
 
+- 모든 도메인에서 FPN + Compound 구조가 baseline을 상회
+- CamVid와 의료 segmentation 모두에서 일관된 성능 향상 확인
+
 ---
 
-### CamVid (E0~E5) — Test mIoU
-
-| 실험 | Test mIoU | E0 대비 |
-|------|-----------|---------|
-| E0 (baseline) | 0.5682 | — |
-| E1 (FPN+CE) | 0.5829 | +0.0147 |
-| E2 (MLP+Focal) | 0.5669 | −0.0013 |
-| E3 (MLP+CE+Dice) | 0.5796 | +0.0114 |
-| E4 (MLP+CE+Boundary) | 0.5705 | +0.0023 |
-| **E5 (복합)** | **0.7572** | **+0.1890** |
-
-#### Val vs Test mIoU — 검증 기반 Loss 평가의 신뢰도
-
-좌측 패널(A)에서 E0~E4 각 실험의 Val mIoU와 Test mIoU를 같은 축 위에 나란히 배치하고, 우측 패널(B)에서 E0 대비 Δ(Val, Test)를 표시하여 방향 일치 여부를 직관적으로 드러낸다. E2(Focal)만 Val +0.0134로 "개선"으로 보이지만 Test −0.0013으로 "열화"되는 역전 현상이 빨간 박스로 강조된다.
+### Val vs Test Generalization Analysis
 
 ![Val vs Test mIoU Trustworthiness](figure/e0_e4_val_vs_test.png)
 
-#### E0~E4 Per-class IoU Heatmap (CamVid Test Set)
+- E2(Focal)는 validation에서는 개선처럼 보이지만
+  test에서는 성능 역전 발생
+- CE+Dice(E3)는 가장 안정적인 일반화 성능을 보임
 
-좌측(A): E0~E4 × 11 classes 절대 IoU 히트맵. 공통 취약 클래스(Pole, SignSymbol, Pedestrian, Bicyclist)는 빨간 박스로 강조. 우측(B): E0 대비 Δ IoU diverging 히트맵. E1(FPN) 행을 초록 박스로 강조하여 클래스 전반에 걸친 일관된 개선을 시각화 — Pole +0.058, Pavement +0.032 등 셀 단위로 확인 가능.
+---
 
-![E0~E4 Per-class IoU Heatmap](figure/e0_e4_per_class_heatmap.png)
+### Per-class IoU Analysis
 
-#### E0 → E5 Per-class IoU 향상 (CamVid Test)
+![E0\~E4 Per-class IoU Heatmap](figure/e0_e4_per_class_heatmap.png)
 
-좌측(A): 11개 클래스를 Δ 크기 오름차순으로 정렬하여 E0와 E5의 IoU를 그룹 bar로 비교. 우측(B): Δ IoU(E5 − E0) 수평 bar에 전체 평균 Δ +0.189를 빨간 점선으로 표시. 소수 클래스(Pedestrian, SignSymbol, Fence, Bicyclist, Pole)는 빨간 라벨로 강조되며, 이들의 개선 폭(Pedestrian +0.340, SignSymbol +0.323, Fence +0.314, Bicyclist +0.304, Pole +0.259)이 전체 평균을 압도적으로 상회한다.
+- FPN(E1)은 대부분 클래스에서 일관된 향상
+- 특히:
+  - Pole
+  - Pedestrian
+  - SignSymbol
+
+  등 소형 객체에서 개선 확인
+
+---
+
+### E0 → E5 Improvement
 
 ![E0 to E5 Per-class IoU Improvement](figure/e0_to_e5_per_class.png)
 
+소형 객체 클래스에서 가장 큰 향상 발생:
+
+- Pedestrian: +0.340
+- SignSymbol: +0.323
+- Fence: +0.314
+- Bicyclist: +0.304
+- Pole: +0.259
+
 ---
 
-### Kvasir-SEG (M0~M1) — Test Dice
+## 5. Kvasir-SEG Results
 
-| 실험 | Test Dice | Test mIoU |
-|------|-----------|-----------|
-| M0 (MLP+CE) | 0.9222 | 0.9147 |
-| **M1 (FPN+CE+Dice+Boundary)** | **0.9275** | **0.9201** |
+### Test Metrics
 
-#### Kvasir-SEG 학습 수렴 비교 — M0 vs M1
+| Experiment | Test Dice | Test mIoU |
+|------------|-----------|-----------|
+| M0 | 0.9222 | 0.9147 |
+| **M1** | **0.9275** | **0.9201** |
 
-2×2 서브플롯: (A) Val Dice, (B) Polyp IoU, (C) Training Loss, (D) Val mIoU. M0(회색)은 epoch 70에서 best Dice 0.8998 달성 후 개선 없어 epoch 90에서 early stopping. M1(파랑)은 epoch 91까지 best를 갱신(0.9083)하며 100 epoch을 완주하며, 연두색 점선으로 M0 early stop 지점을 표시한다. Polyp IoU(B)에서도 M1이 후반부로 갈수록 M0을 안정적으로 상회한다.
+---
+
+### Training Dynamics
 
 ![Kvasir-SEG Training Dynamics](figure/m0_vs_m1_convergence.png)
 
-## Conclusions | 핵심 결론
+- M1은 더 안정적인 수렴 패턴을 보임
+- 후반 epoch에서도 지속적으로 best metric 갱신
+- 의료 segmentation domain에서도 구조적 일반화 가능성 확인
 
-1. **Decoder 변경(FPN)이 Loss 변경보다 안정적이고 일관된 효과**를 보인다 (E1 > E0, val·test 모두).
-2. **Loss 변형 중 CE+Dice(E3)가 가장 안정적**으로 일반화된다. Focal(E2)은 val→test에서 역전 현상 발생.
-3. **E5의 대폭 향상은 pretrained encoder가 주된 요인**으로 추정된다 (epoch 10 val mIoU 0.7135 = E0~E4 최종값 상회).
-4. **E5 파이프라인은 도메인에 무관하게 재사용 가능**하다 (CamVid→Kvasir-SEG config 교체만으로 동작).
+---
 
-## Repository Structure | 리포 구조
+## 6. Key Findings
 
-```
-experiments/E{N}_{name}/README.md   ← 실험별 상세 결과
-analysis/final_report.md            ← E0~E5 통합 분석
+1. **FPN Decoder는 MLP 대비 더 안정적이고 일관된 성능 향상**을 제공한다.
+2. **CE+Dice 조합이 가장 안정적인 loss 구성**으로 확인되었다.
+3. **Focal Loss는 validation 대비 test 일반화 성능이 불안정**했다.
+4. **E5 성능 향상의 핵심 요인은 pretrained encoder와 구조적 개선의 결합**으로 해석된다.
+5. 동일 파이프라인이 의료 segmentation domain에도 효과적으로 적용되었다.
+
+---
+
+## 7. Repository Structure
+
+```text
+experiments/E{N}_{name}/README.md
+analysis/final_report.md
+figure/
 ```
 
 ---
 
-# SegFormer-B0 Semantic Segmentation — Experiment Docs
+## 8. Notes
 
-## Abstract
-
-We systematically vary the decoder architecture (MLP vs FPN) and loss function (CE / Focal / Dice / Boundary combinations) while keeping the SegFormer-B0 encoder (MiT-B0) frozen. Experiments run on two domains: CamVid (11-class urban driving) and Kvasir-SEG (2-class medical polyp). A single-variable principle is strictly enforced for E0–E4; E5 is a compound experiment grounded in E0–E4 findings.
-
-## Key Findings
-
-- FPN decoder consistently outperforms MLP across val and test sets (+0.0147 mIoU on CamVid test).
-- CE+Dice is the most stable loss combination; Focal loss shows val→test reversal.
-- E5 (pretrained encoder + FPN + compound loss + augmentation) achieves 0.7572 test mIoU, +0.189 over baseline.
-- The same pipeline transfers to the medical domain (Kvasir-SEG) with only a config change, achieving 0.9275 Dice.
+- Encoder는 SegFormer-B0 구조를 유지한다.
+- E0\~E4는 single-variable principle을 엄격히 따른다.
+- MMSegmentation 없이 pure PyTorch 기반으로 구현하였다.

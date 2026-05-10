@@ -1,4 +1,4 @@
-# M0: Medical Baseline (MLP + CE, Kvasir-SEG)
+﻿# M0: Medical Baseline (MLP + CE, Kvasir-SEG)
 
 | | |
 |---|---|
@@ -42,3 +42,4 @@
 Kvasir-SEG 도메인에서 MLP 디코더와 CE loss만 사용한 기본 구조 대조군이다. Test Dice 0.9222, test mIoU 0.9147로 도메인 전환 성공 기준(Test Dice ≥ 0.80)을 0.12 이상 초과 달성했다. Val→Test 방향이 역전(+0.0224)되는 현상은 test 100장이 상대적으로 쉬운 샘플로 구성되어 있거나 val 기준 best checkpoint 전략이 test에서도 일반화된 결과로 해석된다. Epoch 70에서 best 달성 후 epoch 90에서 early stopping이 발동하여 정상 수렴한다.
 
 M0 is the medical-domain control: MLP decoder with CE loss on Kvasir-SEG (2-class polyp segmentation). Test Dice of 0.9222 exceeds the domain-transfer success threshold (≥0.80) by over 0.12. The positive val→test delta (+0.0224) indicates the test split (100 images) contains relatively easier samples. ImageNet pretrain transfer is highly effective in this domain. Early stopping triggered at epoch 90 (patience=20 after best at epoch 70), confirming clean convergence.
+

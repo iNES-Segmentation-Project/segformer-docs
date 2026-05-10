@@ -1,4 +1,4 @@
-# SegFormer-B0 통합 분석 보고서 (E0~E5, M0~M1)
+﻿# SegFormer-B0 통합 분석 보고서 (E0~E5, M0\~M1)
 
 ---
 
@@ -13,8 +13,8 @@
 
 ### 고정 요소
 
-- **인코더**: MiT-B0 (SegFormer-B0), E0~E4는 scratch, E5·M0·M1은 ImageNet pretrained
-- **E0~E4 공통**: 기본 학습률 6e-4, poly scheduler, 증강 없음
+- **인코더**: MiT-B0 (SegFormer-B0), E0\~E4는 scratch, E5·M0·M1은 ImageNet pretrained
+- **E0\~E4 공통**: 기본 학습률 6e-4, poly scheduler, 증강 없음
 - **E5·M0·M1 공통**: enc lr 6e-5 / dec lr 6e-4 (차등), warmup_poly scheduler, PaperlikeTransform 증강, AdamW
 
 ### 변경 요소 요약
@@ -32,7 +32,7 @@
 
 ---
 
-## 2. E0~E4 단일 변수 효과 분석
+## 2. E0\~E4 단일 변수 효과 분석
 
 ### 2-1. Decoder 효과 (E0 → E1)
 
@@ -69,7 +69,7 @@ Val과 test 양쪽에서 FPN이 MLP를 일관되게 상회한다. Per-class IoU�
 | E4 | 0.6510 | 0.5705 | 0.0805 |
 | E5 | 0.8043 | 0.7572 | **0.0471** |
 
-E0~E4 전반에 걸쳐 하락폭은 0.069~0.083 범위로 비교적 일정하다. 이는 특정 실험의 문제가 아닌, CamVid 369장의 제한된 학습 데이터와 scratch 학습이라는 구조적 한계에서 비롯된다. E2의 하락폭(0.0834)이 가장 크며, 이는 Focal loss의 과적합 경향과 일치한다.
+E0\~E4 전반에 걸쳐 하락폭은 0.069~0.083 범위로 비교적 일정하다. 이는 특정 실험의 문제가 아닌, CamVid 369장의 제한된 학습 데이터와 scratch 학습이라는 구조적 한계에서 비롯된다. E2의 하락폭(0.0834)이 가장 크며, 이는 Focal loss의 과적합 경향과 일치한다.
 
 ---
 
@@ -77,11 +77,11 @@ E0~E4 전반에 걸쳐 하락폭은 0.069~0.083 범위로 비교적 일정하다
 
 ### 3-1. 설계 근거
 
-E5의 구성은 E0~E4 결과에서 직접 도출되었다:
+E5의 구성은 E0\~E4 결과에서 직접 도출되었다:
 
 - **Decoder → FPN**: E1에서 val·test 양쪽 일관된 우위 확인
 - **Loss → CE+Dice+Boundary**: E3의 CE+Dice가 가장 안정적, E4의 Boundary 추가로 경계 정보 보완
-- **pretrained encoder**: E0~E4 scratch 학습의 test mIoU 상한(0.5829)을 극복하기 위한 전이 학습 도입
+- **pretrained encoder**: E0\~E4 scratch 학습의 test mIoU 상한(0.5829)을 극복하기 위한 전이 학습 도입
 - **warmup_poly + diff-LR + aug**: pretrained 가중치 보호(enc lr 6e-5)와 일반화 강화
 
 ### 3-2. 성능
@@ -98,7 +98,7 @@ E5의 구성은 E0~E4 결과에서 직접 도출되었다:
 
 E5에서 여러 요소가 동시에 변경되어 개별 기여를 정량적으로 분리할 수 없다. 다만 다음 근거에서 pretrained encoder의 기여가 가장 클 것으로 추정된다:
 
-1. **Epoch 10 val mIoU = 0.7135**: warmup 완료 시점에서 이미 E0~E4가 40 epoch 전부 소진해도 달성하지 못한 수준을 기록한다.
+1. **Epoch 10 val mIoU = 0.7135**: warmup 완료 시점에서 이미 E0\~E4가 40 epoch 전부 소진해도 달성하지 못한 수준을 기록한다.
 2. **소수 클래스의 대폭 향상**: SignSymbol(0.2229 → 0.5455), Pedestrian(0.2734 → 0.6137), Fence(0.3632 → 0.6776). 이러한 향상은 단순한 학습량 증가나 loss 변경만으로 설명하기 어렵다.
 3. **Val→Test 하락폭 감소(0.047)**: augmentation 강화가 train 분포를 test에 더 가깝게 만든 복합 효과로도 해석 가능하다.
 
@@ -108,7 +108,7 @@ E5에서 여러 요소가 동시에 변경되어 개별 기여를 정량적으�
 
 ---
 
-## 4. M0~M1 의료 도메인 전환 검증
+## 4. M0\~M1 의료 도메인 전환 검증
 
 ### 4-1. 실험 설계
 
@@ -170,7 +170,7 @@ M1의 train loss가 높은 것은 CE+Dice+Boundary 복합 loss의 스케일 차�
 | **mIoU** | **0.5682** | **0.5829** | **0.5669** | **0.5796** | **0.5705** | **0.7572** | **+0.1890** |
 
 **주요 관찰:**
-- E0~E4 공통 취약 클래스: Pole, SignSymbol, Pedestrian, Bicyclist (IoU 0.21~0.39). 단일 변수 변경만으로는 해소되지 않는 구조적 한계다.
+- E0\~E4 공통 취약 클래스: Pole, SignSymbol, Pedestrian, Bicyclist (IoU 0.21~0.39). 단일 변수 변경만으로는 해소되지 않는 구조적 한계다.
 - **Fence 이상**: E1(FPN)에서 Fence IoU가 E0(MLP)보다 낮다(0.3528 < 0.3632). FPN의 다중 스케일 융합이 좁고 선형적인 구조물에는 MLP보다 불리할 수 있음을 시사한다.
 - E5에서 소수 클래스의 향상이 특히 두드러지며, 이는 pretrained encoder와 augmentation의 복합 효과로 해석된다.
 
@@ -186,7 +186,7 @@ M1의 train loss가 높은 것은 CE+Dice+Boundary 복합 loss의 스케일 차�
 | E5 val 로그 이중 출력 | 학습 종료 후 best model 재평가 블록으로 확인 | test 결과와 일치. 정상 동작 |
 | M0·M1 Val→Test 방향 역전 (+값) | test가 val보다 높게 나옴 | test 100장의 분포 특성 또는 best checkpoint 전략. 비정상 아님 |
 | M1 early stopping 미발동 | 100 epoch 완주 | 복합 loss 특성상 느리고 지속적인 수렴. 정상 |
-| E0~E4 소수 클래스 전반적 저조 | Pole·SignSymbol·Pedestrian·Bicyclist | 구조적 한계 (데이터 불균형 + scratch 학습). 단일 실험 이상 아님 |
+| E0\~E4 소수 클래스 전반적 저조 | Pole·SignSymbol·Pedestrian·Bicyclist | 구조적 한계 (데이터 불균형 + scratch 학습). 단일 실험 이상 아님 |
 
 심각한 이상 징후는 E2의 val-test 역전이 유일하다. 나머지는 해석 가능한 범위 내에 있다.
 
@@ -201,9 +201,9 @@ val과 test 양쪽에서 FPN(E1)이 MLP(E0) 대비 일관된 우위(test +0.0147
 val +0.0149 → test +0.0114로 개선폭이 유지된다. Focal(E2)은 val과 test 간 방향이 역전되어 신뢰도가 낮으며, Boundary(E4)는 test에서 개선폭이 크게 줄어든다. Scratch 학습 조건에서 loss 선택 시 CE+Dice가 권장된다.
 
 **결론 3. E5의 대폭 향상은 pretrained encoder가 주된 요인으로 추정된다.**
-Epoch 10 시점의 val mIoU(0.7135)가 E0~E4 최종값을 이미 상회하며, 소수 클래스(SignSymbol, Pedestrian, Fence, Bicyclist)의 test IoU가 대폭 개선된 점이 근거다. 다만 복합 변경 실험이므로 단일 요인의 기여는 ablation 없이 정량화할 수 없다.
+Epoch 10 시점의 val mIoU(0.7135)가 E0\~E4 최종값을 이미 상회하며, 소수 클래스(SignSymbol, Pedestrian, Fence, Bicyclist)의 test IoU가 대폭 개선된 점이 근거다. 다만 복합 변경 실험이므로 단일 요인의 기여는 ablation 없이 정량화할 수 없다.
 
-**결론 4. E0~E4의 val-test 하락폭(평균 0.077)은 데이터셋 규모의 구조적 한계다.**
+**결론 4. E0\~E4의 val-test 하락폭(평균 0.077)은 데이터셋 규모의 구조적 한계다.**
 369개의 학습 데이터로 11개 클래스를 scratch 학습하는 조건에서는 일정 수준의 val-test 괴리가 불가피하다. E5에서 pretrained encoder와 augmentation 도입 후 하락폭이 0.047로 감소한 점은 이 한계를 완화하는 방향을 확인해 준다.
 
 **결론 5. E5 파이프라인은 도메인에 관계없이 재사용 가능하다.**
@@ -277,3 +277,4 @@ The E5 pipeline (FPN + CE+Dice+Boundary + pretrained + warmup_poly + diff-LR + a
 3. **Pretrained encoder is the primary driver of E5 gains.** Epoch-10 val mIoU (0.7135) already surpasses E0–E4 final values; minority-class improvements cannot be attributed to decoder or loss changes alone.
 4. **The val→test gap in E0–E4 (~0.077 average) is a structural dataset constraint**, not a tuning problem. Pretrained encoder + augmentation (E5) reduces this to 0.047.
 5. **The E5 pipeline generalizes across domains.** Applied to Kvasir-SEG via config swap only, it achieves Test Dice 0.9275 (M1 > M0), replicating the FPN > MLP pattern from CamVid and validating the pipeline as domain-agnostic.
+

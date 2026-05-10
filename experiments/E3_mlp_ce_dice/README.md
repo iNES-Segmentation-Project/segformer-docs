@@ -1,4 +1,4 @@
-# E3: CE+Dice Loss (MLP + CE+Dice)
+﻿# E3: CE+Dice Loss (MLP + CE+Dice)
 
 | | |
 |---|---|
@@ -41,3 +41,4 @@
 E0 대비 CE loss에 Dice loss를 추가한 실험이다. Val +0.0149, test +0.0114로 val·test 양쪽에서 일관된 개선이 유지되어, loss 변형 중 가장 안정적인 일반화 패턴을 보인다. E2(Focal)와 달리 val-test 방향 역전이 없으며, Fence(0.3731), SignSymbol(0.2498), Pedestrian(0.3095)에서 E0·E2보다 우수하다. CE+Dice 조합은 영역 기반 overlap 최적화가 CE의 픽셀 단위 분류를 보완하여 전반적인 경계 정렬 품질을 개선한 것으로 해석된다.
 
 Adding Dice loss to CE (vs E0) yields consistent val (+0.0149) and test (+0.0114) gains — the most stable generalization pattern among all loss variants. Unlike E2, there is no val-to-test reversal. The Dice term's region-level overlap optimization complements CE's pixel-level classification, improving boundary alignment across most classes. CE+Dice is the recommended loss choice when using the MLP decoder on CamVid.
+
