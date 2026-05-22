@@ -35,8 +35,8 @@ Pole, Pedestrian, SignSymbol과 같은 소형 객체 인식 성능 저하로 이
 본 프로젝트는 다음을 검증하는 것을 목표로 한다.
 
 1. Decoder 구조 변경(FPN)이 경량 encoder의 한계를 완화할 수 있는가?
-2. Loss 함수 조합이 segmentation 일반화 성능에 어떤 영향을 미치는가?
-3. 동일 구조가 의료 segmentation domain(Kvasir-SEG)에도 일반화 가능한가?
+2. Loss 함수 조합이 segmentation 성능에 어떤 영향을 미치는가?
+3. 우리가 도입한 파이프라인이 의료 segmentation domain(Kvasir-SEG)에도 적용 가능한가?
 
 ---
 
